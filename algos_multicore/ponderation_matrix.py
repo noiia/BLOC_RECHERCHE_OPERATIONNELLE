@@ -11,13 +11,14 @@ def generate_city_dependance(cities):
     Generates a city dependence matrix based on the number of cities.
     """
     city_dependance = []
+    print("\n### generate city dependance ###")
     for i in range(len(cities)):
         submatrix = []
         for j in range(len(cities)):
             if i == j:
                 submatrix.append(0)
             else:
-                road_blocked = pr.prob(0.25)  # 5% de probabilité
+                road_blocked = pr.prob(0.05)  # 5% de probabilité
                 if road_blocked:
                     submatrix.append(0)
                 else:
@@ -28,6 +29,8 @@ def generate_city_dependance(cities):
 
 def generate_ponderation_matrix(matrix):
     ponderation_matrix = []
+   
+    print("\n### generate ponderation matrix ###")
 
     for i in range(len(matrix)):
         submatrix = []
@@ -52,6 +55,9 @@ def calcul_fitness(chemin, matrice_ponderation, City_Dependance ):
     """
     Calcule la distance totale d'un chemin donné dans la matrice de distances.
     """
+
+    print("\n### calcul fitness ###")
+
     ponderation_totale = 0
     for i in range(len(chemin) - 1):
         

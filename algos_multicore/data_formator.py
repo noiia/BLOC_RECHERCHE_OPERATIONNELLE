@@ -1,5 +1,4 @@
-from multiprocessing import Pool, cpu_count
-import calculate_travel_time
+import calculate_travel_time as ctt
 
 def geocode_city(city_name):
     from geopy.geocoders import Nominatim
@@ -25,20 +24,16 @@ def GenerateCityMapFromCSV(size):
     import random
     from tqdm import tqdm
     
+    print("\n### generate city map from csv ###")
+
     city_map = {} 
     df = pd.read_csv("projet\CityName.csv", on_bad_lines='skip')
     city_list = df['City'].dropna().tolist()
     city_list = random.sample(city_list, size)
-    
-    with Pool(processes=cpu_count()) as pool:
-        results = list(tqdm(pool.imap(geocode_worker, city_list)))
-        
-    # Filtrer les résultats None et ajouter au dictionnaire
-    for result in results:
-        if result:
-            city, coords = result
-            city_map[city] = coords
-            
+    for city in tqdm(city_list):
+        lat, lon = geocode_city(city) 
+        if  (lat or lon) is not None:
+            city_map[city] = (lat,lon)
     return city_map
 
 def matrix_generation(cities, mode, link, params, toPrint=False):
@@ -52,7 +47,7 @@ def matrix_generation(cities, mode, link, params, toPrint=False):
         submatrix = []
         for destinationCity in cities:
             if sourceCity is not destinationCity:
-                duration, distance, _ = calculate_travel_time(sourceCity, destinationCity, cities, mode, link, params)
+                duration, distance, _ = ctt.calculate_travel_time(sourceCity, destinationCity, cities, mode, link, params)
                 if toPrint:
                     submatrix.append([datetime.fromtimestamp(duration, tz=pytz.utc).strftime('%H:%M:%S'), int(distance / 1000)])
                 else:
@@ -60,5 +55,45 @@ def matrix_generation(cities, mode, link, params, toPrint=False):
             else:
                 submatrix.append([0, 0])
         matrix.append(submatrix)
+
+    return matrix
+
+
+def submatrix_generation(args):
+    import pytz
+    from datetime import datetime
+
+    sourceCity= args[0]
+    cities= args[1]
+    mode = args[2]
+    link= args[3]
+    params = args[4]
+    toPrint = args[5]
+
+    submatrix = []
+    for destinationCity in cities:
+        if sourceCity is not destinationCity:
+            duration, distance, _ = ctt.calculate_travel_time(sourceCity, destinationCity, cities, mode, link, params)
+            if toPrint:
+                submatrix.append([datetime.fromtimestamp(duration, tz=pytz.utc).strftime('%H:%M:%S'), int(distance / 1000)])
+            else:
+                submatrix.append([duration, int(distance / 1000)])
+        else:
+            submatrix.append([0, 0])
+
+def matrix_generation_parallele(cities, mode, link, params, toPrint=False):
+    from tqdm import tqdm
+    import multiprocessing
+    from multiprocessing import Pool
+
+    matrix = []
+    tempoMatrix = {}
+
+    with Pool(processes=16) as pool:
+        for i, sourceCity in tqdm(enumerate(cities)):
+            tempoMatrix[i] = [submatrix for submatrix in pool.imap(submatrix_generation, [sourceCity, cities, mode, link, params, toPrint])]
+
+    for i in range(len(tempoMatrix)):
+        matrix.append(tempoMatrix[i])
 
     return matrix

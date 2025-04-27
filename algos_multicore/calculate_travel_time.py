@@ -23,7 +23,10 @@ def calculate_travel_time(departure_city, arrival_city, city_map, mode, osrm_lin
     url = f"{osrm_link}/{mode}/{lon1},{lat1};{lon2},{lat2}"
 
     # Call to the OSRM API
-    response = requests.get(url, params=params, timeout=50)
+    try:
+        response = requests.get(url, params=params, timeout=10)
+    except requests.RequestException as e:
+        return (None, None, f"Request failed: {e}")
     
     if response.status_code != 200:
         return (None, None, f"Error during API call: {response.status_code}")
@@ -48,7 +51,8 @@ def calculate_travel_time(departure_city, arrival_city, city_map, mode, osrm_lin
     if minutes > 0:
         formatted_time += f"{int(minutes)} minute{'s' if minutes > 1 else ''}"
     
-    return (duration_seconds, distance_meters, formatted_time.strip())
+    if duration_seconds != None and distance_meters != None:
+        return (duration_seconds, distance_meters, "")
 
 def display_route(departure_city, arrival_city, city_map, mode, osrm_link, params):
     """Displays route information between two cities"""

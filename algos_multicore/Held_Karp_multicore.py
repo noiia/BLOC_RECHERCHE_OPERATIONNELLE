@@ -1,33 +1,23 @@
-import data_formator, calculate_travel_time, graphs
+import data_formator, graphs
 import ponderation_matrix as pdm
+import calculate_travel_time as ctt
 
-Cities = data_formator.GenerateCityMapFromCSV(25)
-
-link = "http://router.project-osrm.org/route/v1/"
-params = {
-    "overview": "false",
-    "alternatives": "false",
-    }
-matrix = data_formator.matrix_generation(Cities, "driving", link, params)
-
-City_Dependance = pdm.generate_city_dependance(Cities)
-
-ponderation_matrix = pdm.generate_ponderation_matrix(matrix)
-
-graphs.generate_complete_graph(ponderation_matrix, Cities)
-graphs.generate_complete_map(Cities)
-
-import pytz
+import pytz, os
+import pandas as pd
+import numpy as np
 from datetime import datetime
-from tqdm import tqdm
 from multiprocessing import Pool, cpu_count
+from tqdm import tqdm
 
 def compute_row(args):
+    
+    print("\n### compute row ###")
+
     sourceCity, cities, mode, link, params, toPrint = args
     submatrix = []
     for destinationCity in cities:
-        if sourceCity is not destinationCity:
-            duration, distance, _ = calculate_travel_time(sourceCity, destinationCity, cities, mode, link, params)
+        if sourceCity != destinationCity:
+            duration, distance, _ = ctt.calculate_travel_time(sourceCity, destinationCity, cities, mode, link, params)
             if toPrint:
                 submatrix.append([
                     datetime.fromtimestamp(duration, tz=pytz.utc).strftime('%H:%M:%S'),
@@ -115,7 +105,41 @@ def held_karp(dist, start=0):
 
     return min_cost, min_path
 
-min_cost, path = held_karp(ponderation_matrix, start=0)
-print(f"Coût minimum : {min_cost}\nChemin : {path}")
-graphs.generate_hamiltonian_graph(path, min_cost, ponderation_matrix, Cities)
-graphs.generate_hamiltonian_map(path, Cities)
+def generated_matrice_file(Cities, link, params):
+    matrix = data_formator.matrix_generation(Cities, "driving", link, params)
+    # matrix = data_formator.matrix_generation_parallele(Cities, "driving", link, params)
+
+    City_Dependance = pdm.generate_city_dependance(Cities)
+
+    ponderation_matrix = pdm.generate_ponderation_matrix(matrix)
+    ponderation_matrix = np.where(np.isinf(ponderation_matrix), 1e8, ponderation_matrix)
+    # Convertir en DataFrame
+    df = pd.DataFrame(ponderation_matrix, columns=Cities)
+
+    # Sauvegarder en fichier CSV
+    df.to_csv(os.path.join(os.getcwd(), ".\\projet\\algos_multicore\\weighted_matrix.csv"), index=False)
+
+def held_karp_from_file(file_path):
+    df = pd.read_csv(file_path)
+    ponderation_matrix = df.to_numpy()
+    Cities = df.columns
+    graphs.generate_complete_graph(ponderation_matrix, Cities)
+    graphs.generate_complete_map(Cities)
+
+    min_cost, path = held_karp(ponderation_matrix, start=0)
+    print(f"Coût minimum : {min_cost}\nChemin : {path}")
+    graphs.generate_hamiltonian_graph(path, min_cost, ponderation_matrix, Cities)
+    graphs.generate_hamiltonian_map(path, Cities)
+
+
+if __name__ == "__main__":
+    # Cities = data_formator.GenerateCityMapFromCSV(35)
+
+    link = "http://router.project-osrm.org/route/v1/"
+    params = {
+        "overview": "false",
+        "alternatives": "false",
+        }
+    # generated_matrice_file(Cities, link, params)
+
+    held_karp_from_file('./weighted_matrix.csv')
