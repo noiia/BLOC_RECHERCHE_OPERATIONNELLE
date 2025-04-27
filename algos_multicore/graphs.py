@@ -2,7 +2,8 @@
 def generate_complete_graph(matrix, cities):
     import networkx as nx
     import matplotlib.pyplot as plt
-    
+    import math
+
     G = nx.Graph()
     cities_converted = {}
     index = -1
@@ -10,14 +11,14 @@ def generate_complete_graph(matrix, cities):
     for city1 in range(len(cities)):
         for city2 in range(len(cities)):
             if city1 != city2:
-                if matrix[city1][city2][1] != None:
+                if matrix[city1][city2] != None and matrix[city1][city2] != math.inf:
                     if city1 not in cities_converted: 
                         index+=1
                         cities_converted[city1] = index
                     if city2 not in cities_converted:
                         index+=1
                         cities_converted[city2] = index
-                    G.add_edge(cities_converted[city1], cities_converted[city2], weight=f"{matrix[city1][city2][1]}")
+                    G.add_edge(cities_converted[city1], cities_converted[city2], weight=f"{matrix[city1][city2]}")
             
     pos = nx.spring_layout(G, seed=12, k=1.5)
     nx.draw(G, pos, with_labels=True, node_color='skyblue', node_size=1000, edge_color='gray', font_size=10)
@@ -47,7 +48,7 @@ def generate_hamiltonian_graph(path, path_cost, matrix, cities):
                 if city2 not in cities_converted:
                     cities_converted[city2] = path[city_index+1]
 
-                edge_weight = matrix[list(cities.keys()).index(city1[0])][list(cities.keys()).index(city2[0])][1]
+                edge_weight = matrix[list(cities.keys()).index(city1[0])][list(cities.keys()).index(city2[0])]
                 total_weight += edge_weight
                 G.add_edge(cities_converted[city1], cities_converted[city2],weight=f"{edge_weight}")
         
