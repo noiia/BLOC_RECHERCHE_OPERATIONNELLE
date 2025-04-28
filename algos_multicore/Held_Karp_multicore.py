@@ -122,9 +122,12 @@ def generated_matrice_file(Cities, link, params):
 def held_karp_from_file(file_path):
     df = pd.read_csv(file_path)
     ponderation_matrix = df.to_numpy()
-    Cities = df.columns
-    graphs.generate_complete_graph(ponderation_matrix, Cities)
-    graphs.generate_complete_map(Cities)
+    Cities = {}
+    for city in list(df.columns):
+        city, (lat, lon) = data_formator.geocode_worker(city)
+        Cities[city] = {lat, lon}
+    # graphs.generate_complete_graph(ponderation_matrix, Cities)
+    # graphs.generate_complete_map(Cities)
 
     min_cost, path = held_karp(ponderation_matrix, start=0)
     print(f"Coût minimum : {min_cost}\nChemin : {path}")
@@ -142,4 +145,4 @@ if __name__ == "__main__":
         }
     # generated_matrice_file(Cities, link, params)
 
-    held_karp_from_file('./weighted_matrix.csv')
+    held_karp_from_file('.\\projet\\algos_multicore\\weighted_matrix.csv')
