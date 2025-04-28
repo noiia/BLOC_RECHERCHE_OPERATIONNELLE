@@ -109,8 +109,6 @@ def generated_matrice_file(Cities, link, params):
     matrix = data_formator.matrix_generation(Cities, "driving", link, params)
     # matrix = data_formator.matrix_generation_parallele(Cities, "driving", link, params)
 
-    City_Dependance = pdm.generate_city_dependance(Cities)
-
     ponderation_matrix = pdm.generate_ponderation_matrix(matrix)
     ponderation_matrix = np.where(np.isinf(ponderation_matrix), 1e8, ponderation_matrix)
     # Convertir en DataFrame
